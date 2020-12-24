@@ -1,6 +1,9 @@
 /* @flow */
 import type { TransitionStyle } from './Types';
 
+// 拓扑排序
+// onRemove 是在 next 中没有 prev 中的 key 时，根据返回值判断是否保留
+
 // core keys merging algorithm. If previous render's keys are [a, b], and the
 // next render's [c, b, d], what's the final merged keys and ordering?
 

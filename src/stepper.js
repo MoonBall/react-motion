@@ -7,21 +7,26 @@
 let reusedTuple: [number, number] = [0, 0];
 export default function stepper(
   secondPerFrame: number,
-  x: number,
-  v: number,
-  destX: number,
-  k: number,
-  b: number,
-  precision: number,
+  x: number, // 上次位置
+  v: number, // 上次速度
+  destX: number, // 目标位置
+  k: number, // stiffness
+  b: number, // damping
+  precision: number, // 精度
 ): [number, number] {
   // Spring stiffness, in kg / s^2
 
+  // -10 * (0 - 400) = 4000 kg * m / (s ^ 2)
   // for animations, destX is really spring length (spring at rest). initial
   // position is considered as the stretched/compressed position of a spring
   const Fspring = -k * (x - destX);
 
+  // -10 * 0 = 0 kg * m / (s ^ 2)
   // Damping, in kg / s
   const Fdamper = -b * v;
+
+  // （Fspring + Fdamper) / kg 后单位是 m / (s ^ 2)
+  // 其值就是加速度
 
   // usually we put mass here, but for animation purposes, specifying mass is a
   // bit redundant. you could simply adjust k and b accordingly

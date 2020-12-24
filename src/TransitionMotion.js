@@ -116,7 +116,9 @@ function mergeAndSync(
   willEnter: WillEnter,
   willLeave: WillLeave,
   didLeave: DidLeave,
+  // 有 defaultStyles 时是 defaultStyles 为准，但是 styles[key] 会覆盖同名的 defaultStyles[key]
   oldMergedPropsStyles: Array<TransitionStyle>,
+  // 目标值
   destStyles: Array<TransitionStyle>,
   oldCurrentStyles: Array<PlainStyle>,
   oldCurrentVelocities: Array<Velocity>,
@@ -129,10 +131,14 @@ function mergeAndSync(
   Array<PlainStyle>,
   Array<Velocity>,
 ] {
+  // newMergedPropsStyles 就是 merge 后的 key 数组，它代表的是目标
+  // 下面执行 didLeave
   const newMergedPropsStyles = mergeDiff(
     oldMergedPropsStyles,
     destStyles,
     (oldIndex, oldMergedPropsStyle) => {
+      // willLeave 会执行非常多次，但这个函数确实一般是个纯函数
+      // 所以没必要增加代码复杂性来保证该函数只调用一次
       const leavingStyle = willLeave(oldMergedPropsStyle);
       if (leavingStyle == null) {
         didLeave({
@@ -177,6 +183,8 @@ function mergeAndSync(
     }
     // TODO: key search code
     if (foundOldIndex == null) {
+      // willEnter 的返回值会设置当前的 val
+      // 设置 velocity 为 0
       const plainStyle = willEnter(newMergedPropsStyleCell);
       newCurrentStyles[i] = plainStyle;
       newLastIdealStyles[i] = plainStyle;
@@ -185,6 +193,8 @@ function mergeAndSync(
       newCurrentVelocities[i] = velocity;
       newLastIdealVelocities[i] = velocity;
     } else {
+      // 移除时速度和 val 都不变，改变的是 willLeave 返回的目标值
+      // 非新增非移除时直接使用上次的 val 和 vel
       newCurrentStyles[i] = oldCurrentStyles[foundOldIndex];
       newLastIdealStyles[i] = oldLastIdealStyles[foundOldIndex];
       newCurrentVelocities[i] = oldCurrentVelocities[foundOldIndex];
@@ -289,6 +299,15 @@ export default class TransitionMotion extends React.Component<
     const destStyles: Array<TransitionStyle> =
       typeof styles === 'function' ? styles(defaultStyles) : styles;
 
+    // 第一次渲染时逻辑：
+    // 1. 如果有 defaultStyles
+    //    1.1 初始 key[] 以 defaultStyles 为准
+    //    1.2 每个 key 对应的初始 val 以 defaultStyles 为准
+    //    1.3 每个 key 对应的目标 val
+    //        1.3.1 如果 styles 中有该 key，则以 styles 为准（这一步可以省略，因为 mergeDiff 已经保证桶 key 以 next 为准）
+    //        1.3.2 如果 styles 中没有该 key，则以 defaultStyles 为准
+    // 2. 如果没有 defaultStyles，所以值以 styles 为准
+
     // this is special. for the first time around, we don't have a comparison
     // between last (no last) and current merged props. we'll compute last so:
     // say default is {a, b} and styles (dest style) is {b, c}, we'll
@@ -297,6 +316,9 @@ export default class TransitionMotion extends React.Component<
     if (defaultStyles == null) {
       oldMergedPropsStyles = destStyles;
     } else {
+      // 这里可以直接写成下面。因为 mergeDiff 已经保证桶 key 以 next 为准
+      // oldMergedPropsStyles = (defaultStyles: any);
+
       oldMergedPropsStyles = (defaultStyles: any).map(defaultStyleCell => {
         // TODO: key search code
         for (let i = 0; i < destStyles.length; i++) {
@@ -398,6 +420,9 @@ export default class TransitionMotion extends React.Component<
         }
       }
     }
+
+    // 这一次 unreadPropStyles 可能会导致新增或删除 key（删除还可能是只改变了 destStyle）
+    // 但没有逻辑去判断新的 mergedPropsStyles 是否和以前一样
 
     // unlike the other 2 components, we can't detect staleness and optionally
     // opt out of setState here. each style object's data might contain new
