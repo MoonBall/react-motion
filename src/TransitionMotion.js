@@ -45,6 +45,7 @@ function rehydrateStyles(
       style: plainStyles[i],
     }));
   }
+  // 目的是同步 unreadPropStyles 中的 data
   return mergedPropsStyles.map((mergedPropsStyle, i) => {
     for (let j = 0; j < cUnreadPropStyles.length; j++) {
       if (cUnreadPropStyles[j].key === mergedPropsStyle.key) {
@@ -231,6 +232,8 @@ type TransitionMotionState = {
   lastIdealVelocities: Array<Velocity>,
   // the array that keeps track of currently rendered stuff! Including stuff
   // that you've unmounted but that's still animating. This is where it lives
+  // 数据的先后顺序存储在 mergedPropsStyles
+  // key 在 TransitionStyle 中
   mergedPropsStyles: Array<TransitionStyle>,
 };
 
@@ -307,6 +310,10 @@ export default class TransitionMotion extends React.Component<
     //        1.3.1 如果 styles 中有该 key，则以 styles 为准（这一步可以省略，因为 mergeDiff 已经保证桶 key 以 next 为准）
     //        1.3.2 如果 styles 中没有该 key，则以 defaultStyles 为准
     // 2. 如果没有 defaultStyles，所以值以 styles 为准
+
+    // defaultStyles 是给 oldCurrentStyles 用的
+    // defaultStyles 和 destStyles 都是给 oldMergedPropsStyles，这个值表示的是样式的结果值
+    // 如果 defaultStyles 中没有，destStyles 中有，则会触发 willEnter
 
     // this is special. for the first time around, we don't have a comparison
     // between last (no last) and current merged props. we'll compute last so:
